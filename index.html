@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barcode Generator</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js';
+        import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, deleteDoc, doc } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js';
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDduaFPwrppNB77NUJCTcgIXC0eX1TwxX4",
+            authDomain: "barcode-app-237a1.firebaseapp.com",
+            projectId: "barcode-app-237a1",
+            storageBucket: "barcode-app-237a1.firebasestorage.app",
+            messagingSenderId: "900380260828",
+            appId: "1:900380260828:web:bfed0135ae4629d386b719"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Make auth and db available globally
+        window.auth = auth;
+        window.db = db;
+
+        // Debug Firebase initialization
+        console.log('Firebase initialized successfully');
+        console.log('Auth object:', auth);
+        console.log('DB object:', db);
+        console.log('Project ID:', firebaseConfig.projectId);
+
+        // Firebase Auth functions using v9 syntax
+        window.signInWithEmailAndPassword = async (email, password) => {
+            const { signInWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js');
+            return signInWithEmailAndPassword(auth, email, password);
+        };
+
+        window.signUpWithEmailAndPassword = async (email, password) => {
+            const { createUserWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js');
+            return createUserWithEmailAndPassword(auth, email, password);
+        };
+
+        window.signOutUser = async () => {
+            const { signOut } = await import('https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js');
+            return signOut(auth);
+        };
+
+        // Firestore functions using v9 syntax
+        window.addDocToFirestore = async (data) => {
+            try {
+                console.log('addDocToFirestore called with data:', data);
+                console.log('DB object type:', typeof db);
+                console.log('DB object:', db);
+                
+                const { collection, addDoc } = await import('https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js');
+                console.log('Firestore modules imported successfully');
+                
+                const barcodesRef = collection(db, 'barcodes');
+                console.log('Collection reference created:', barcodesRef);
+                console.log('Collection path:', barcodesRef.path);
+                
+                const result = await addDoc(barcodesRef, data);
+                console.log('Document added successfully:', result);
+                return result;
+            } catch (error) {
+                console.error('addDocToFirestore error:', error);
+                console.error('Error code:', error.code);
+                console.error('Error message:', error.message);
+                throw error;
+            }
+        };
+
+        window.getBarcodeHistory = async (userId) => {
+            const { collection, query, where, orderBy, limit, getDocs } = await import('https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js');
+            const barcodesRef = collection(db, 'barcodes');
+            const q = query(
+                barcodesRef,
+                where('userId', '==', userId),
+                orderBy('createdAt', 'desc'),
+                limit(10)
+            );
+            return getDocs(q);
+        };
+
+        // Simpler query without ordering while index builds
+        window.getBarcodeHistorySimple = async (userId) => {
+            const { collection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js');
+            const barcodesRef = collection(db, 'barcodes');
+            const q = query(
+                barcodesRef,
+                where('userId', '==', userId)
+            );
+            return getDocs(q);
+        };
+
+        window.deleteBarcodeFromFirestore = async (id) => {
+            const { deleteDoc, doc } = await import('https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js');
+            const barcodeRef = doc(db, 'barcodes', id);
+            return deleteDoc(barcodeRef);
+        };
+
+        window.updateBarcodeInFirestore = async (id, updates) => {
+            const { updateDoc, doc } = await import('https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js');
+            const barcodeRef = doc(db, 'barcodes', id);
+            return updateDoc(barcodeRef, updates);
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <div class="header-text">
+                    <h1>Barcode Generator</h1>
+                    <p>Generate scannable barcodes for your products</p>
+                </div>
+                <div class="auth-section">
+                    <div id="userInfo" class="user-info" style="display: none;">
+                        <span id="userEmail"></span>
+                        <button id="signOutBtn" class="sign-out-btn">Sign Out</button>
+                    </div>
+                    <div id="authButtons" class="auth-buttons">
+                        <button id="signInBtn" class="auth-btn sign-in-btn">Sign In</button>
+                        <button id="signUpBtn" class="auth-btn sign-up-btn">Sign Up</button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <div class="input-section">
+                <div class="input-group">
+                    <label for="productName">Product Name</label>
+                    <input type="text" id="productName" placeholder="Enter product name" maxlength="50">
+                </div>
+
+                <div class="input-group">
+                    <label for="barcodeType">Barcode Type</label>
+                    <select id="barcodeType">
+                        <option value="CODE128">Code 128 (Universal)</option>
+                        <option value="EAN13">EAN-13</option>
+                        <option value="UPC">UPC-A</option>
+                        <option value="CODE39">Code 39</option>
+                    </select>
+                </div>
+
+                <button id="generateBtn" class="generate-btn">
+                    <span class="btn-text">Generate Barcode</span>
+                    <span class="btn-icon">📦</span>
+                </button>
+            </div>
+
+            <div class="result-section" id="resultSection">
+                <div class="barcode-container">
+                    <div class="barcode-header">
+                        <h3 id="productTitle"></h3>
+                        <div class="barcode-actions">
+                            <button id="downloadBtn" class="download-btn">Download PNG</button>
+                            <button id="printBtn" class="print-btn">Print Label</button>
+                            <button id="saveBarcodeBtn" class="save-btn" style="display: none;">Save to History</button>
+                        </div>
+                    </div>
+                    <div class="barcode-display">
+                        <svg id="barcode"></svg>
+                    </div>
+                    <div class="barcode-info">
+                        <small id="barcodeText"></small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Barcode History Section -->
+            <div class="history-section" id="historySection" style="display: none;">
+                <h3>Your Barcode History</h3>
+                <div class="history-list" id="historyList"></div>
+            </div>
+        </main>
+
+        <!-- Authentication Modal -->
+        <div id="authModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modalTitle">Sign In</h2>
+                    <button id="closeModal" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="authForm">
+                        <div class="input-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="password">Password</label>
+                            <input type="password" id="password" required minlength="6">
+                        </div>
+                        <button type="submit" id="authSubmitBtn" class="auth-submit-btn">Sign In</button>
+                    </form>
+                    <div class="auth-toggle">
+                        <p id="authToggleText">Don't have an account? <a href="#" id="authToggleLink">Sign Up</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Print Settings Modal -->
+        <div id="printModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Print Settings</h2>
+                    <button id="closePrintModal" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="print-info">
+                        <p><strong>Brother TD-2020 Default:</strong> 30mm × 10mm labels</p>
+                    </div>
+                <div class="modal-body">
+                    <div class="input-group">
+                        <label for="labelWidth">Label Width (mm)</label>
+                        <input type="number" id="labelWidth" value="30" min="10" max="100" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="labelHeight">Label Height (mm)</label>
+                        <input type="number" id="labelHeight" value="10" min="5" max="100" step="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="printDPI">Print Quality (DPI)</label>
+                        <select id="printDPI">
+                            <option value="150">150 DPI (Standard)</option>
+                            <option value="300" selected>300 DPI (High Quality)</option>
+                            <option value="600">600 DPI (Ultra High)</option>
+                        </select>
+                    </div>
+                    <div class="print-actions">
+                        <button id="printWithSettings" class="print-settings-btn">Print Label</button>
+                        <button id="cancelPrint" class="cancel-btn">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Ready for Firebase integration and Vercel deployment</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

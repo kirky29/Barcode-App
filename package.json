@@ -1,0 +1,33 @@
+{
+  "name": "barcode-generator",
+  "version": "1.0.0",
+  "description": "A simple web app to generate scannable barcodes",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve .",
+    "dev": "serve . --port 3000",
+    "build": "echo 'No build step required for static site'",
+    "deploy": "vercel --prod"
+  },
+  "keywords": [
+    "barcode",
+    "generator",
+    "web-app",
+    "firebase",
+    "vercel"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "serve": "^14.2.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "your-github-repo-url"
+  },
+  "homepage": "https://your-project-name.vercel.app"
+}
